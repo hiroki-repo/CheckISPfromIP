@@ -1,0 +1,179 @@
+#packopt name "checkisp"
+#runtime "hsp3cl"
+#uselib "Iphlpapi.dll"
+#cfunc IcmpCreateFile "IcmpCreateFile"
+#cfunc IcmpSendEcho "IcmpSendEcho" int,int,int,int,int,int,int,int
+#func IcmpCloseHandle "IcmpCloseHandle" int
+
+dim ipoption,2
+sdim receivedata,1024
+ispname=""
+data4send="Data Buffer"
+ipaddrstr=""+dir_cmdline:repeat:if strmid(ipaddrstr,0,1)=" "{ipaddrstr=strmid(ipaddrstr,1,strlen(ipaddrstr))}else{break}:loop
+sdim ipaddrstrx,64,4
+split ipaddrstr,".",ipaddrstrx
+poke ipaddrs,0,int(ipaddrstrx(0))
+poke ipaddrs,1,int(ipaddrstrx(1))
+poke ipaddrs,2,int(ipaddrstrx(2))
+poke ipaddrs,3,int(ipaddrstrx(3))
+sameipaddr=0:icmpresultzc=0:previousip=0:previousip2=ipaddrs:prevunpinged=0:unpinged=0
+icmphndl=IcmpCreateFile()
+repeat 32
+ipoption(0)=0
+ipoption(1)=0
+poke ipoption,0,cnt+1
+poke ipoption,3,0
+repeat 2
+icmpresult=IcmpSendEcho(icmphndl,ipaddrs,varptr(data4send),varsize(data4send),varptr(ipoption),varptr(receivedata),varsize(receivedata),3500)
+if lpeek(receivedata,0)!=0{break}
+loop
+if (icmpresult=0 & icmpresultzc=32) | (sameipaddr=1 & lpeek(receivedata,0)=lpeek(ipaddrs,0)){break}
+if previousip!=0{previousip2=previousip}
+if previousip=lpeek(receivedata,0) & (lpeek(receivedata,4)=11002 | lpeek(receivedata,4)=11003) & icmpresult!=0{mes "[Unassigned IP address]":break}
+previousip=0
+if lpeek(receivedata,0)=lpeek(ipaddrs,0){sameipaddr=1}
+if (icmpresult=0){icmpresultzc++}else{icmpresultzc=0}
+if sameipaddr=0{prevunpinged=unpinged}
+if (icmpresult!=0){
+ispname="Unknown ISP"
+if peek(receivedata,0)=1 & peek(receivedata,1)=21 & (peek(receivedata,2)>=96 & peek(receivedata,2)<=111){ispname="FAMILYNET JAPAN CORPORATION"}
+if peek(receivedata,0)=1 & peek(receivedata,1)=21 & (peek(receivedata,2)>=128 & peek(receivedata,2)<=143){ispname="FAMILYNET JAPAN CORPORATION"}
+if peek(receivedata,0)=3{ispname="AWS"}
+if peek(receivedata,0)=4 & (peek(receivedata,1)>=0 & peek(receivedata,1)<=127){ispname="Level 3 Communications, Inc."}
+if peek(receivedata,0)=6{ispname="Army Information Systems Center"}
+if peek(receivedata,0)=7{ispname="DoD Network Information Center"}
+if peek(receivedata,0)=10{ispname="Private Network"}
+if peek(receivedata,0)=11{ispname="DoD Intel Information Systems"}
+if peek(receivedata,0)=12{ispname="AT&T"}
+if peek(receivedata,0)=14 & (peek(receivedata,1)>=132 & peek(receivedata,1)<=133){ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=17{ispname="Apple Computer"}
+if peek(receivedata,0)=19{ispname="Ford Motor Company"}
+if peek(receivedata,0)=21{ispname="DDN-RVN"}
+if peek(receivedata,0)=22{ispname="Defense Information Systems Agency"}
+if peek(receivedata,0)=26{ispname="Defense Information Systems Agency"}
+if peek(receivedata,0)=28{ispname="DSI-North"}
+if peek(receivedata,0)=29 | peek(receivedata,0)=30{ispname="Defense Information Systems Agency"}
+if peek(receivedata,0)=33{ispname="DLA Systems Automation Center"}
+if peek(receivedata,0)=27 & (peek(receivedata,1)>=4 & peek(receivedata,1)<=7){ispname="HATHWAY CABLE AND DATACOM LIMITED"}
+if peek(receivedata,0)=27 & (peek(receivedata,1)>=80 & peek(receivedata,1)<=95){ispname="KDDI Corporation"}
+if peek(receivedata,0)=38{ispname="Cogent Communications/PSI Net"}
+if peek(receivedata,0)=45 & peek(receivedata,1)=138 & (peek(receivedata,2)>=173 & peek(receivedata,2)<=175){ispname="aurologic GmbH"}
+if peek(receivedata,0)=49 & (peek(receivedata,1)>=96 & peek(receivedata,1)<=111){ispname="NTT DOCOMO,Inc."}
+if peek(receivedata,0)=53{ispname="Mercedes-Benz Group AG"}
+if peek(receivedata,0)=55{ispname="DoD Network Information Center"}
+if peek(receivedata,0)=58 & (peek(receivedata,1)>=156 & peek(receivedata,1)<=159){if peek(receivedata,1)=156 & peek(receivedata,2)=102 & (peek(receivedata,3)>=144 & peek(receivedata,3)<=159) {ispname="Gocaine Online Plainel Network(ARTERIA Networks Corporation)"}else{ispname="ARTERIA Networks Corporation"}}
+if peek(receivedata,0)=59 & (peek(receivedata,1)>=128 & peek(receivedata,1)<=143){ispname="KDDI Corporation"}
+if peek(receivedata,0)=60 & (peek(receivedata,1)>=32 & peek(receivedata,1)<=47){ispname="NTT Communications Corporation"}
+if peek(receivedata,0)=61 & peek(receivedata,1)=205 & peek(receivedata,2)=16 & (peek(receivedata,3)>=32 & peek(receivedata,3)<=255){ispname="Japan Agency for Local Authority Information Systems"}
+if peek(receivedata,0)=61 & peek(receivedata,1)=205 & (peek(receivedata,2)>=17 & peek(receivedata,2)<=31){ispname="Japan Agency for Local Authority Information Systems"}
+if peek(receivedata,0)=61 & peek(receivedata,1)=212{ispname="Japan Agency for Local Authority Information Systems"}
+if peek(receivedata,0)=62 & peek(receivedata,1)=115{ispname="Arelion, Twelve99, f/k/a Telia Carrier"}
+if peek(receivedata,0)=73{ispname="Comcast Corporation"}
+if peek(receivedata,0)=74 & peek(receivedata,1)=82{ispname="Hurricane Electric"}
+if peek(receivedata,0)=89 & peek(receivedata,1)=221 & (peek(receivedata,2)>=32 & peek(receivedata,2)<=63){ispname="Telecom Italia Sparkle S.p.A."}
+if peek(receivedata,0)=93 & peek(receivedata,1)=186 & (peek(receivedata,2)>=120 & peek(receivedata,2)<=127){ispname="VITAL TEKNOLOJI TELEKOMUNIKASYON BILGISAYAR HIZMETLERI VE SANAYI TICARET LTD SIRKETI"}
+if peek(receivedata,0)=93 & peek(receivedata,1)=186 & (peek(receivedata,2)>=128 & peek(receivedata,2)<=143){ispname="Telecom Italia Sparkle S.p.A."}
+if peek(receivedata,0)=93 & peek(receivedata,1)=186 & (peek(receivedata,2)>=144 & peek(receivedata,2)<=159){ispname="OPEN FIBRE NETWORKS (WHOLESALE) LIMITED"}
+if peek(receivedata,0)=93 & peek(receivedata,1)=186 & (peek(receivedata,2)>=160 & peek(receivedata,2)<=175){ispname="Inline Internet Online Dienste GmbH"}
+if peek(receivedata,0)=93 & peek(receivedata,1)=186 & (peek(receivedata,2)>=176 & peek(receivedata,2)<=191){ispname="Oxilion B.V."}
+if peek(receivedata,0)=93 & peek(receivedata,1)=186 & (peek(receivedata,2)>=192 & peek(receivedata,2)<=207){ispname="WIIT AG"}
+if peek(receivedata,0)=93 & peek(receivedata,1)=186 & (peek(receivedata,2)>=208 & peek(receivedata,2)<=223){ispname="System Net Ltd"}
+if peek(receivedata,0)=93 & peek(receivedata,1)=186 & (peek(receivedata,2)>=224 & peek(receivedata,2)<=239){ispname="VKontakte"}
+if peek(receivedata,0)=93 & peek(receivedata,1)=186 & (peek(receivedata,2)>=240 & peek(receivedata,2)<=255){ispname="Aruba S.p.A."}
+if peek(receivedata,0)=100 & (peek(receivedata,1)>=64 & peek(receivedata,1)<=127){ispname="Private Network(Shared Network)"}
+if peek(receivedata,0)=103 & peek(receivedata,1)=22 & (peek(receivedata,2)>=200 & peek(receivedata,2)<=203){ispname="Cloudflare, Inc."}
+if peek(receivedata,0)=103 & peek(receivedata,1)=157 & (peek(receivedata,2)>=242 & peek(receivedata,2)<=243){ispname="Digital Agency"}
+if peek(receivedata,0)=103 & peek(receivedata,1)=198 & (peek(receivedata,2)>=140 & peek(receivedata,2)<=143){ispname="Reliance Industries Limited"}
+if peek(receivedata,0)=103 & peek(receivedata,1)=246 & (peek(receivedata,2)>=80 & peek(receivedata,2)<=83){ispname="FAMILYNET JAPAN CORPORATION"}
+if peek(receivedata,0)=106 & (peek(receivedata,1)>=128 & peek(receivedata,1)<=191){ispname="KDDI Corporation"}
+if peek(receivedata,0)=111 & (peek(receivedata,1)>=86 & peek(receivedata,1)<=87){ispname="KDDI Corporation"}
+if peek(receivedata,0)=111 & (peek(receivedata,1)>=96 & peek(receivedata,1)<=111){ispname="KDDI Corporation"}
+if peek(receivedata,0)=111 & (peek(receivedata,1)>=236 & peek(receivedata,1)<=239){if peek(receivedata,1)=238 & peek(receivedata,2)=24 & (peek(receivedata,3)>=160 & peek(receivedata,3)<=191) {ispname="Gocaine Online Plainel Network(KDDI Corporation)"}else{ispname="KDDI Corporation"}}
+if peek(receivedata,0)=113 & peek(receivedata,1)=29{ispname="Level 3 Communications, Inc."}
+if peek(receivedata,0)=113 & (peek(receivedata,1)>=144 & peek(receivedata,1)<=159){ispname="KDDI Corporation"}
+if peek(receivedata,0)=114 & (peek(receivedata,1)>=144 & peek(receivedata,1)<=191){ispname="NTT Communications Corporation"}
+if peek(receivedata,0)=115 & (peek(receivedata,1)>=36 & peek(receivedata,1)<=39){ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=116 & peek(receivedata,1)=58 & (peek(receivedata,2)>=160 & peek(receivedata,2)<=191){ispname="INTERLINK Co.,LTD."}
+if peek(receivedata,0)=118 & (peek(receivedata,1)>=0 & peek(receivedata,1)<=15){ispname="NTT Communications Corporation"}
+if peek(receivedata,0)=118 & (peek(receivedata,1)>=104 & peek(receivedata,1)<=106){ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=118 & peek(receivedata,1)=177{ispname="NIPPON TELEGRAPH AND TELEPHONE EAST CORPORATION"}
+if peek(receivedata,0)=121 & (peek(receivedata,1)>=104 & peek(receivedata,1)<=111){ispname="KDDI Corporation"}
+if peek(receivedata,0)=122 & (peek(receivedata,1)>=16 & peek(receivedata,1)<=31){ispname="NTT Communications Corporation"}
+if peek(receivedata,0)=123 & peek(receivedata,1)=1 & (peek(receivedata,2)>=0 & peek(receivedata,2)<=127){ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=123 & peek(receivedata,1)=48{ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=124 & peek(receivedata,1)=18{ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=124 & (peek(receivedata,1)>=208 & peek(receivedata,1)<=215){ispname="KDDI Corporation"}
+if peek(receivedata,0)=124 & peek(receivedata,1)=244{ispname="Hong Kong Broadband Network Ltd"}
+if peek(receivedata,0)=124 & peek(receivedata,1)=245{ispname="NIPPON TELEGRAPH AND TELEPHONE WEST CORPORATION"}
+if peek(receivedata,0)=125 & (peek(receivedata,1)>=48 & peek(receivedata,1)<=55){ispname="KDDI Corporation"}
+if peek(receivedata,0)=125 & (peek(receivedata,1)>=100 & peek(receivedata,1)<=103){ispname="ARTERIA Networks Corporation"}
+if peek(receivedata,0)=126{ispname="SoftBank"}
+if peek(receivedata,0)=127{ispname="Local Host Loopback"}
+if peek(receivedata,0)=133{ispname="University Network"}
+if peek(receivedata,0)=133 & (peek(receivedata,1)=0 | peek(receivedata,1)=255){ispname="Reserved"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=1{ispname="Osaka University"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=2{ispname="Aoyama Gakuin University"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=3{ispname="Kyoto University"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=4{ispname="WIDE Project"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=5{ispname="Kyushu University"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=6{ispname="Nagoya University"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=7{ispname="University Of Fukui"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=104{ispname="Technical College Network"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=105{ispname="Japan Meteorological Agency"}
+if peek(receivedata,0)=133 & (peek(receivedata,1)>=113 & peek(receivedata,1)<=120){ispname="Toshiba"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=128{ispname="KDDI Corporation"}
+if peek(receivedata,0)=133 & (peek(receivedata,1)>=131 & peek(receivedata,1)<=132){ispname="NIPPON TELEGRAPH AND TELEPHONE EAST CORPORATION"}
+if peek(receivedata,0)=133 & peek(receivedata,1)=149 & ((peek(receivedata,2)>=0 & peek(receivedata,2)<=63) | (peek(receivedata,2)>=128 & peek(receivedata,2)<=191)){ispname="Marubeni OKI Network Solutions Inc."}
+if peek(receivedata,0)=133 & peek(receivedata,1)=149 & (peek(receivedata,2)>=192 & peek(receivedata,2)<=255){ispname="ARTERIA Networks Corporation"}
+if peek(receivedata,0)=133 & (peek(receivedata,1)>=200 & peek(receivedata,1)<=209){ispname="NEC"}
+if peek(receivedata,0)=136 & (peek(receivedata,1)>=232 & peek(receivedata,1)<=233){ispname="Reliance Jio Infocomm Limited"}
+if peek(receivedata,0)=141 & peek(receivedata,1)=136 & (peek(receivedata,2)>=96 & peek(receivedata,2)<=111){ispname="GTT Communications Inc."}
+if peek(receivedata,0)=150 & (peek(receivedata,1)=99 | peek(receivedata,1)=100){ispname="Sinet"}
+if peek(receivedata,0)=154 & peek(receivedata,1)=54{ispname="Cogent Communications/PSI Net"}
+if peek(receivedata,0)=158 & (peek(receivedata,1)>=128 & peek(receivedata,1)<=253){ispname="NTT Communications Corporation"}
+if peek(receivedata,0)=160 & peek(receivedata,1)=237{ispname="Tama University"}
+if peek(receivedata,0)=160 & peek(receivedata,1)=237 & (peek(receivedata,2)>=64 & peek(receivedata,2)<=191){ispname="FAMILYNET JAPAN CORPORATION"}
+if peek(receivedata,0)=163 & peek(receivedata,1)=139{ispname="ARTERIA Networks Corporation"}
+if peek(receivedata,0)=166 & peek(receivedata,1)=119{ispname="Digital Agency"}
+if peek(receivedata,0)=169 & peek(receivedata,1)=254{ispname="Link Local Network"}
+if peek(receivedata,0)=172 & (peek(receivedata,1)>=16 & peek(receivedata,1)<=31){ispname="Private Network"}
+if peek(receivedata,0)=172 & (peek(receivedata,1)>=64 & peek(receivedata,1)<=71){ispname="Cloudflare, Inc."}
+if peek(receivedata,0)=175 & (peek(receivedata,1)>=128 & peek(receivedata,1)<=135){ispname="KDDI Corporation"}
+if peek(receivedata,0)=180 & (peek(receivedata,1)>=0 & peek(receivedata,1)<=63){ispname="NTT Communications Corporation"}
+if peek(receivedata,0)=180 & (peek(receivedata,1)>=196 & peek(receivedata,1)<=199){ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=184 & (peek(receivedata,1)>=24 & peek(receivedata,1)<=31){ispname="Akamai Technologies, Inc."}
+if peek(receivedata,0)=184 & (peek(receivedata,1)>=104 & peek(receivedata,1)<=105){ispname="Hurricane Electric"}
+if peek(receivedata,0)=192 & peek(receivedata,1)=88 & peek(receivedata,2)=99{ispname="6to4 translation relay system"}
+if peek(receivedata,0)=192 & peek(receivedata,1)=168{ispname="Private Network"}
+if peek(receivedata,0)=202 & peek(receivedata,1)=32 & peek(receivedata,2)=215 & (peek(receivedata,3)>=64 & peek(receivedata,3)<=95){ispname="National Diet Library"}
+if peek(receivedata,0)=202 & peek(receivedata,1)=48 & (peek(receivedata,2)>=48 & peek(receivedata,2)<=63){ispname="Bunkyo University"}
+if peek(receivedata,0)=202 & peek(receivedata,1)=62 & (peek(receivedata,2)>=160 & peek(receivedata,2)<=175){ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=202 & peek(receivedata,1)=142 & (peek(receivedata,2)>=224 & peek(receivedata,2)<=255){ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=203 & peek(receivedata,1)=181 & (peek(receivedata,2)>=96 & peek(receivedata,2)<=127){ispname="KDDI Corporation"}
+if peek(receivedata,0)=208 & peek(receivedata,1)=116 & (peek(receivedata,2)>=58 & peek(receivedata,2)<=63){ispname="Fortress ITX"}
+if peek(receivedata,0)=208 & peek(receivedata,1)=116 & (peek(receivedata,2)>=64 & peek(receivedata,2)<=127){ispname="JPMorgan Chase & Co."}
+if peek(receivedata,0)=208 & peek(receivedata,1)=116 & (peek(receivedata,2)>=128 & peek(receivedata,2)<=255){ispname="GTT Communications Inc."}
+if peek(receivedata,0)=210 & peek(receivedata,1)=171 & (peek(receivedata,2)>=224 & peek(receivedata,2)<=239){ispname="Japan Internet Xing Co., Ltd."}
+if peek(receivedata,0)=210 & peek(receivedata,1)=173 & (peek(receivedata,2)>=144 & peek(receivedata,2)<=151){ispname="Chubu Telecommunications Co.,Inc."}
+if peek(receivedata,0)=210 & peek(receivedata,1)=234{ispname="KDDI Corporation"}
+if peek(receivedata,0)=213 & peek(receivedata,1)=176 & (peek(receivedata,2)>=96 & peek(receivedata,2)<=111){ispname="E-Large"}
+if peek(receivedata,0)=213 & peek(receivedata,1)=176 & (peek(receivedata,2)>=112 & peek(receivedata,2)<=119){ispname="AEZA INTERNATIONAL LTD"}
+if peek(receivedata,0)=214 | peek(receivedata,0)=215{ispname="US-DOD"}
+if peek(receivedata,0)=216 & peek(receivedata,1)=218 & (peek(receivedata,2)>=128 & peek(receivedata,2)<=255){ispname="Hurricane Electric"}
+if peek(receivedata,0)=219 & peek(receivedata,1)=110{if peek(receivedata,2)=201 & peek(receivedata,3)=211 {ispname="Gocaine Project Memorial IP Address(its communications Inc.)"}else{ispname="its communications Inc."}}
+if peek(receivedata,0)=221 & (peek(receivedata,1)>=240 & peek(receivedata,1)<=255){ispname="ARTERIA Networks Corporation"}
+if peek(receivedata,0)=221 & (peek(receivedata,1)>=16 & peek(receivedata,1)<=111){ispname="SoftBank"}
+if peek(receivedata,0)=222 & (peek(receivedata,1)>=226 & peek(receivedata,1)<=227){ispname="KDDI Corporation"}
+mes str(peek(receivedata,0))+"."+str(peek(receivedata,1))+"."+str(peek(receivedata,2))+"."+str(peek(receivedata,3))+" : "+ispname
+unpinged=0
+}else{
+mes "*"
+unpinged=1
+}
+previousip=lpeek(receivedata,0)
+await
+loop
+IcmpCloseHandle icmphndl
+if unpinged=0 & prevunpinged=1{previousip2=0}
+//mes "Router:"+str(peek(previousip2,0))+"."+str(peek(previousip2,1))+"."+str(peek(previousip2,2))+"."+str(peek(previousip2,3))
+end
